@@ -11,9 +11,9 @@ OPENAI_API_KEY = os.getenv("OPEN_API_KEY")
 GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
-DEBUG = False
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 STATIC_URL = '/static/'
 
@@ -58,14 +58,7 @@ ROOT_URLCONF = 'main.urls'
 CORS_ALLOW_ALL_ORIGINS = True
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv("DB_NAME"),
-        'USER': os.getenv("DB_USER"),
-        'PASSWORD': os.getenv("DB_PASSWORD"),
-        'HOST': os.getenv("DB_HOST"),
-        'PORT': os.getenv("DB_PORT"),
-    }
+    'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
 }
 
 TEMPLATES = [
