@@ -1,2 +1,0 @@
-# Juno
-AI Gaurdian

@@ -1,0 +1,41 @@
+# General Project Ignores
+# -------------------------
+# IDE configuration folders
+.idea/
+.vscode/
+
+# Virtual environment folder at the root
+/venv/
+
+# Secret environment variables (most important!)
+**/.env
+
+# Log files
+*.log
+
+
+# Backend (Django/Python)
+# -------------------------
+# Python cache and compiled files
+__pycache__/
+*.pyc
+
+# Local database files (good practice to keep)
+/backend/db.sqlite3
+
+# User-uploaded media files
+/backend/media/
+
+# Collected static files for deployment
+/backend/static_root/
+/backend/staticfiles/
+
+
+# Frontend (JavaScript)
+# -------------------------
+# Dependency folder
+/frontend/node_modules/
+
+# Build output folders
+/frontend/build/
+/frontend/dist/
