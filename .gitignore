@@ -33,9 +33,6 @@ __pycache__/
 
 # Frontend (JavaScript)
 # -------------------------
-# Dependency folder
 /frontend/node_modules/
-
-# Build output folders
 /frontend/build/
 /frontend/dist/
