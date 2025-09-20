@@ -13,7 +13,7 @@ GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-DEBUG = True
+DEBUG = False
 
 STATIC_URL = '/static/'
 
@@ -28,7 +28,7 @@ STATICFILES_DIRS = [
 DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -44,6 +44,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

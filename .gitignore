@@ -1,6 +1,3 @@
-# General Project Ignores
-# -------------------------
-# IDE configuration folders
 .idea/
 .vscode/
 
