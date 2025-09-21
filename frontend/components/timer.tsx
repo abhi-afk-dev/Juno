@@ -132,3 +132,27 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     }
 });
+
+    // "ios": {
+
+    //   "supportsTablet": true
+
+    // },
+
+    // "android": {
+
+    //   "adaptiveIcon": {
+
+    //     "backgroundColor": "#000000"
+
+    //   },
+
+    //   "edgeToEdgeEnabled": true,
+
+    //   "predictiveBackGestureEnabled": false,
+
+    //   "package": "com.abhi000001.frontend",
+
+    //   "softwareKeyboardLayoutMode":"pan"
+
+    // },

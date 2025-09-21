@@ -33,7 +33,7 @@ type RootStackParamList = {
 type InterfacePageRouteProp = RouteProp<RootStackParamList, "InterfacePage">;
 
 export type Message = {
-    id: string ;
+    id: string;
     type: "user" | "ai";
     content: any;
     date_time: string;
@@ -362,7 +362,6 @@ function InterfacePage() {
                     isLoading={isLoading}
                     setIsLoading={setIsLoading}
                     setToolStatus={setToolStatus}
-                    // Add these two props
                     geminiApiKey={geminiApiKey}
                     tavilyApiKey={tavilyApiKey}
                 />

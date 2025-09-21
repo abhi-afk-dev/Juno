@@ -3,22 +3,8 @@
     "name": "JUNO",
     "slug": "JUNOO",
     "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "Juno",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#000000"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.abhi000001.Juno"
-    },
+    "scheme": "frontend",
+    "newArchEnabled": false,
     "web": {
       "output": "static",
       "favicon": "./assets/images/icon.png"

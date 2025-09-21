@@ -72,5 +72,20 @@
     "react-native-svg-transformer": "^1.5.1",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "doctor": {
+      "configFieldsCheck": {
+        "exclude": [
+          "scheme",
+          "plugins"
+        ]
+      },
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "react-native-tts"
+        ]
+      }
+    }
+  }
 }
