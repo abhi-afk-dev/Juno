@@ -10,23 +10,16 @@ import time
 
 from .tools import internet_search_tool, AVAILABLE_TOOLS
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-genai.configure(api_key=GEMINI_API_KEY)
-
-gemini_flash_model = genai.GenerativeModel(
-    'gemini-2.5-flash',
-    tools=[internet_search_tool]
-)
-
 Aiselected_Model = "Gemini-Flash"
 KEEPALIVE_INTERVAL = 15
+
+# ... (The helper functions sse_event, sse_comment, interface_fetch, 
+#      extract_prompt_summary, and convert_to_gemini_history do not need any changes) ...
 def sse_event(payload: dict) -> str:
     return f"data: {json.dumps(payload)}\n\n"
 
 def sse_comment() -> str:
     return ":\n\n"
-
 
 def interface_fetch(request):
     latest_entry = Chat.objects.order_by('-date_time').first()
@@ -115,8 +108,19 @@ def convert_to_gemini_history(messages_history):
             })
     return gemini_formatted_history
 
+
 @csrf_exempt
 def interface_stream(request):
+    # --- CHANGED ---
+    # 1. Get the user's API key from the request 'Authorization' header
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return JsonResponse(
+            {"error": "Authorization header with Bearer token is required."},
+            status=401
+        )
+    user_api_key = auth_header.split(' ')[1]
+
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
@@ -136,12 +140,23 @@ def interface_stream(request):
         yield sse_comment()
 
         try:
+            # --- CHANGED ---
+            # 2. Configure the genai library and create the model with the user's key
+            #    This is done inside the request to be specific to this user.
+            genai.configure(api_key=user_api_key)
+            gemini_flash_model = genai.GenerativeModel(
+                'gemini-2.5-flash',
+                tools=[internet_search_tool]
+            )
+            
             if Aiselected_Model == "Gemini-Flash":
                 gemini_history = convert_to_gemini_history(messages_history)
                 
+                # Use the newly created model instance
                 response = gemini_flash_model.generate_content(gemini_history)
                 
                 candidate = response.candidates[0]
+                # ... (The rest of your tool-calling and response streaming logic remains the same) ...
                 if candidate.content.parts and candidate.content.parts[0].function_call:
                     function_call = candidate.content.parts[0].function_call
                     tool_name = function_call.name
@@ -200,6 +215,7 @@ def interface_stream(request):
                         last_heartbeat = time.time()
 
         except Exception as e:
+            # This will now catch errors like an invalid API key from the user
             yield sse_event({"type": "error", "message": str(e)})
         finally:
             try:
@@ -217,6 +233,7 @@ def interface_stream(request):
 
     return StreamingHttpResponse(event_stream(), content_type="text/event-stream")
 
+# ... (The paginated_history and conversation_by_name functions do not need any changes) ...
 def paginated_history(request):
     chat_list = Chat.objects.order_by('-date_time').all()
 
