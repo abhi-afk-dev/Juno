@@ -111,23 +111,30 @@ def convert_to_gemini_history(messages_history):
 
 @csrf_exempt
 def interface_stream(request):
-    # --- CHANGED ---
-    # 1. Get the user's API key from the request 'Authorization' header
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return JsonResponse(
-            {"error": "Authorization header with Bearer token is required."},
-            status=401
-        )
-    user_api_key = auth_header.split(' ')[1]
+    # This entire function is updated to handle the new request structure
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON in request body"}, status=400)
 
-    messages_history = data.get('messages')
+    # --- UPDATED 1: Get BOTH keys from the request BODY ---
+    gemini_api_key = data.get('geminiApiKey')
+    tavily_api_key = data.get('tavilyApiKey')
+    
+    messages_history = data.get('history', []) 
+    # The last message is the current prompt, so we add it to the history
+    if data.get('prompt'):
+        messages_history.append({'role': 'user', 'content': data.get('prompt')})
+
     conversation_name = data.get('conversation_name')
+
+    # --- UPDATED 2: Validate that both keys were provided ---
+    if not gemini_api_key or not tavily_api_key:
+        return JsonResponse(
+            {"error": "Both geminiApiKey and tavilyApiKey must be provided in the request body."},
+            status=401
+        )
 
     if not messages_history:
         return JsonResponse({"error": "No messages provided"}, status=400)
@@ -136,86 +143,87 @@ def interface_stream(request):
 
     def event_stream():
         full_response_text = ""
-        last_heartbeat = time.time()
+        # last_heartbeat = time.time() # Optional for keep-alive
         yield sse_comment()
 
         try:
-            # --- CHANGED ---
-            # 2. Configure the genai library and create the model with the user's key
-            #    This is done inside the request to be specific to this user.
-            genai.configure(api_key=user_api_key)
-            gemini_flash_model = genai.GenerativeModel(
-                'gemini-2.5-flash',
+            # --- UPDATED 3: Configure genai with the correct key from the body ---
+            genai.configure(api_key=gemini_api_key)
+            
+            model = genai.GenerativeModel(
+                # Using 1.5 Pro as it generally has better tool-calling capabilities
+                'gemini-1.5-pro-latest',
                 tools=[internet_search_tool]
             )
             
-            if Aiselected_Model == "Gemini-Flash":
-                gemini_history = convert_to_gemini_history(messages_history)
+            gemini_history = convert_to_gemini_history(messages_history)
+            
+            # Use the newly created model instance
+            response = model.generate_content(gemini_history, stream=False)
+            
+            candidate = response.candidates[0]
+            
+            # Check if the model decided to call a function
+            if candidate.content.parts and candidate.content.parts[0].function_call:
+                function_call = candidate.content.parts[0].function_call
+                tool_name = function_call.name
+                tool_args = {key: value for key, value in function_call.args.items()}
                 
-                # Use the newly created model instance
-                response = gemini_flash_model.generate_content(gemini_history)
-                
-                candidate = response.candidates[0]
-                # ... (The rest of your tool-calling and response streaming logic remains the same) ...
-                if candidate.content.parts and candidate.content.parts[0].function_call:
-                    function_call = candidate.content.parts[0].function_call
-                    tool_name = function_call.name
-                    tool_args = {key: value for key, value in function_call.args.items()}
+                yield sse_event({"type": "tool_call", "name": tool_name, "args": tool_args})
+
+                if tool_name in AVAILABLE_TOOLS:
+                    try:
+                        tool_function = AVAILABLE_TOOLS[tool_name]
+                        
+                        # --- UPDATED 4: Pass the tavily_api_key to the tool function ---
+                        tool_output = tool_function(tavily_api_key=tavily_api_key, **tool_args)
+                        
+                        if isinstance(tool_output, dict) and "error" in tool_output:
+                            raise Exception(tool_output["error"])
+
+                    except Exception as tool_e:
+                        error_text = f"An error occurred while using the search tool: {str(tool_e)}"
+                        yield sse_event({"type": "error", "message": error_text})
+                        return # Stop the stream on tool error
                     
-                    yield sse_event({"type": "tool_call", "name": tool_name, "args": tool_args})
-                    last_heartbeat = time.time()
+                    # Send the tool output back to the model
+                    final_response_stream = model.generate_content(
+                        [
+                            *gemini_history,
+                            candidate.content, # Model's request to use the tool
+                            {
+                                "role": "tool",
+                                "parts": [{
+                                    "function_response": {
+                                        "name": tool_name,
+                                        "response": tool_output
+                                    }
+                                }]
+                            }
+                        ],
+                        stream=True
+                    )
+                    
+                    for chunk in final_response_stream:
+                        if chunk.text:
+                            full_response_text += chunk.text
+                            yield sse_event({"type": "delta", "text": chunk.text})
 
-                    if tool_name in AVAILABLE_TOOLS:
-                        try:
-                            tool_function = AVAILABLE_TOOLS[tool_name]
-                            tool_output = tool_function(**tool_args)
-                            print("--- TAVILY API RESPONSE ---", tool_output)
+                else: # Handle case where the model calls a function that doesn't exist
+                    error_text = f"Error: Model tried to call an unknown function '{tool_name}'."
+                    full_response_text += error_text
+                    yield sse_event({"type": "delta", "text": error_text})
 
-                            if isinstance(tool_output, dict) and "error" in tool_output:
-                                raise Exception(tool_output["error"])
-                        except Exception as tool_e:
-                            error_text = f"An error occurred while using the search tool: {str(tool_e)}"
-                            full_response_text += error_text
-                            yield sse_event({"type": "delta", "text": error_text})
-                            return
-                        
-                        model_tool_request = candidate.content
-                        
-                        tool_response = {
-                            'role': 'tool',
-                            'parts': [{
-                                'function_response': {
-                                    'name': tool_name,
-                                    'response': tool_output,
-                                }
-                            }]
-                        }
-                        
-                        updated_history = gemini_history + [model_tool_request, tool_response]
-                        
-                        final_response_stream = gemini_flash_model.generate_content(
-                            updated_history, 
-                            stream=True
-                        )
-                        
-                        for chunk in final_response_stream:
-                            if chunk.text:
-                                full_response_text += chunk.text
-                                yield sse_event({"type": "delta", "text": chunk.text})
-                                last_heartbeat = time.time()
-                    else:
-                        error_text = f"Error: Model tried to call an unknown function '{tool_name}'."
-                        full_response_text += error_text
-                        yield sse_event({"type": "delta", "text": error_text})
-
-                else:
-                    if response.text:
-                        full_response_text += response.text
-                        yield sse_event({"type": "delta", "text": response.text})
-                        last_heartbeat = time.time()
+            else: # If no tool was called, stream the direct response
+                # We need to re-request with stream=True
+                response_stream = model.generate_content(gemini_history, stream=True)
+                for chunk in response_stream:
+                    if chunk.text:
+                        full_response_text += chunk.text
+                        yield sse_event({"type": "delta", "text": chunk.text})
 
         except Exception as e:
-            # This will now catch errors like an invalid API key from the user
+            # This will now catch errors like an invalid Gemini API key
             yield sse_event({"type": "error", "message": str(e)})
         finally:
             try:

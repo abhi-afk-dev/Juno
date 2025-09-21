@@ -1,17 +1,24 @@
+# tools.py
+
 import google.generativeai as genai
-import os
+# REMOVE: import os
 from tavily import TavilyClient
 
-def internet_search(query: str):
+# The function now takes the key as an argument
+def internet_search(query: str, tavily_api_key: str):
+    """Searches the internet for information on a given query."""
     try:
-        tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+        # Use the key passed as an argument, NOT from the environment
+        tavily_client = TavilyClient(api_key=tavily_api_key)
 
+        # ... the rest of your function remains the same ...
         search_queries = [
             query,
             f"what is {query}",
             f"{query} company information",
             f"{query} overview",
         ]
+        # ... etc.
 
         all_results = []
         for q in search_queries:
@@ -22,17 +29,17 @@ def internet_search(query: str):
                 break
         
         if not all_results:
-            return {"results": "No relevant information found on the internet after several attempts."}
+            return {"results": "No relevant information found."}
 
         return {"results": all_results}
     
     except Exception as e:
-        return {"error": "Failed to perform internet search."}
+        return {"error": f"Failed to perform internet search. Details: {str(e)}"}
+
 
 AVAILABLE_TOOLS = {
     "internet_search": internet_search,
 }
-
 internet_search_tool = genai.protos.Tool(
     function_declarations=[
         genai.protos.FunctionDeclaration(
