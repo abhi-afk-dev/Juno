@@ -6,7 +6,6 @@ import {
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    StatusBar,
     Modal,
     Platform,
     Pressable,
@@ -22,7 +21,7 @@ import { fetchConversationById } from "../../components/historyApi";
 import Prompter from "../../components/prompter";
 import Timer from "../../components/timer";
 import Speak from "../../components/speak";
-import WelcomeScreen from '../../components/start'; // Import the WelcomeScreen
+import WelcomeScreen from '../../components/start';
 import StartD from '../../assets/images/start_.svg';
 import StartW from '../../assets/images/start.svg';
 import { useTheme } from "../../components/themeProvider";
@@ -34,14 +33,13 @@ type RootStackParamList = {
 type InterfacePageRouteProp = RouteProp<RootStackParamList, "InterfacePage">;
 
 export type Message = {
-    id: string | number;
+    id: string ;
     type: "user" | "ai";
     content: any;
     date_time: string;
     conversation_name: string;
     attachments?: any[];
 };
-
 function InterfacePage() {
     const { theme } = useTheme();
     const route = useRoute<InterfacePageRouteProp>();
@@ -60,28 +58,33 @@ function InterfacePage() {
     const [toolStatus, setToolStatus] = useState<string | null>(null);
     const scrollViewRef = useRef<KeyboardAwareScrollView>(null);
 
-    // State for the welcome overlay
+    // State for user data
     const [userName, setUserName] = useState<string | null>(null);
+    const [geminiApiKey, setGeminiApiKey] = useState<string | null>(null);
+    const [tavilyApiKey, setTavilyApiKey] = useState<string | null>(null);
     const [showWelcomeOverlay, setShowWelcomeOverlay] = useState(false);
 
-    // This useEffect hook checks for the user's name when the app starts
     useEffect(() => {
-        const checkUserName = async () => {
+        const checkUserData = async () => {
             try {
                 const storedName = await AsyncStorage.getItem('userName');
-                if (storedName) {
+                const storedGeminiKey = await AsyncStorage.getItem('geminiApiKey');
+                const storedTavilyKey = await AsyncStorage.getItem('tavilyApiKey');
+
+                if (storedName && storedGeminiKey && storedTavilyKey) {
                     setUserName(storedName);
+                    setGeminiApiKey(storedGeminiKey);
+                    setTavilyApiKey(storedTavilyKey);
                     setShowWelcomeOverlay(false);
                 } else {
-                    // If no name is found, show the welcome overlay
                     setShowWelcomeOverlay(true);
                 }
             } catch (error) {
-                console.error("Failed to load user's name.", error);
-                setShowWelcomeOverlay(true); // Show overlay on error to allow setting a name
+                console.error("Failed to load user data.", error);
+                setShowWelcomeOverlay(true);
             }
         };
-        checkUserName();
+        checkUserData();
     }, []);
 
     useEffect(() => {
@@ -100,6 +103,33 @@ function InterfacePage() {
             if (intervalRef.current) clearInterval(intervalRef.current);
         };
     }, [isActive, timeLeft]);
+
+    const handleSetupComplete = async () => {
+        try {
+            const storedName = await AsyncStorage.getItem('userName');
+            const storedGeminiKey = await AsyncStorage.getItem('geminiApiKey');
+            const storedTavilyKey = await AsyncStorage.getItem('tavilyApiKey');
+
+            setUserName(storedName);
+            setGeminiApiKey(storedGeminiKey);
+            setTavilyApiKey(storedTavilyKey);
+            setShowWelcomeOverlay(false);
+        } catch (error) {
+            console.error("Failed to reload user data after setup.", error)
+        }
+    };
+
+    const handleResetSettings = async () => {
+        try {
+            await AsyncStorage.multiRemove(['userName', 'geminiApiKey', 'tavilyApiKey']);
+            setUserName(null);
+            setGeminiApiKey(null);
+            setTavilyApiKey(null);
+            setShowWelcomeOverlay(true);
+        } catch (error) {
+            console.error("Failed to delete user data.", error);
+        }
+    };
 
     useEffect(() => {
         const fetchConversation = async () => {
@@ -332,6 +362,9 @@ function InterfacePage() {
                     isLoading={isLoading}
                     setIsLoading={setIsLoading}
                     setToolStatus={setToolStatus}
+                    // Add these two props
+                    geminiApiKey={geminiApiKey}
+                    tavilyApiKey={tavilyApiKey}
                 />
             </View>
 
@@ -369,12 +402,8 @@ function InterfacePage() {
             </Modal>
 
             {/* Welcome Screen Overlay Modal */}
-            <Modal
-                transparent={true}
-                visible={showWelcomeOverlay}
-                animationType="fade"
-            >
-                <WelcomeScreen onNameSubmitted={handleNameSubmitted} />
+            <Modal transparent={true} visible={showWelcomeOverlay} animationType="fade">
+                <WelcomeScreen onSetupComplete={handleSetupComplete} />
             </Modal>
         </View >
     );

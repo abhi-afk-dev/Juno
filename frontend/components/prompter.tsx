@@ -8,12 +8,20 @@ import {
   Image,
   Text,
   ScrollView,
+  Alert,
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { Ionicons } from '@expo/vector-icons';
 import { v4 as uuidv4 } from 'uuid';
 import SSE from 'react-native-sse';
-import { ChatMessage, MessageContentPart } from "./historyApi";
+// Assuming your ChatMessage and MessageContentPart types are defined here
+// import { ChatMessage, MessageContentPart } from "./historyApi";
+
+// --- For demonstration, defining types here ---
+type MessageContentPart = { type: string; text?: string; image_url?: { url: string }; file_url?: { url: string; name: string } };
+type ChatMessage = { id: string; type: "user" | "ai"; content: MessageContentPart[]; attachments?: any[]; date_time: string; conversation_name: string };
+// ---------------------------------------------
+
 
 interface PrompterProps {
   onNewMessage: (message: ChatMessage) => void;
@@ -22,6 +30,8 @@ interface PrompterProps {
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
   setToolStatus: (status: string | null) => void;
+  geminiApiKey: string | null;
+  tavilyApiKey: string | null;
 }
 
 export default function Prompter({
@@ -31,6 +41,8 @@ export default function Prompter({
   isLoading,
   setIsLoading,
   setToolStatus,
+  geminiApiKey,
+  tavilyApiKey,
 }: PrompterProps) {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<DocumentPicker.DocumentPickerAsset[]>([]);
@@ -52,6 +64,15 @@ export default function Prompter({
   const sendMessage = async () => {
     if ((!input.trim() && attachments.length === 0) || isLoading) return;
 
+    // 1. Validate that both API keys are present before sending
+    if (!geminiApiKey || !tavilyApiKey) {
+      Alert.alert(
+        "API Keys Missing",
+        "Please ensure your Gemini and Tavily API keys are set before sending a message."
+      );
+      return;
+    }
+
     const userMessageContent: MessageContentPart[] = [];
     if (input.trim()) {
       userMessageContent.push({ type: "text", text: input.trim() });
@@ -67,7 +88,6 @@ export default function Prompter({
       .filter(Boolean) as MessageContentPart[];
 
     const fullUserContent = [...userMessageContent, ...attachmentPartsForUi];
-
     const userMessage: ChatMessage = {
       id: uuidv4(),
       type: "user",
@@ -76,7 +96,6 @@ export default function Prompter({
       date_time: new Date().toISOString(),
       conversation_name: conversationName || "new",
     };
-
     onNewMessage(userMessage);
     setInput("");
     setAttachments([]);
@@ -111,25 +130,32 @@ export default function Prompter({
 
       const resolvedAttachments = await Promise.all(attachmentPromises);
       const userMessageContentForApi = [...userMessageContent, ...resolvedAttachments];
-
+      
       const historyForAPI = messages.map((msg) => ({
         role: msg.type === "ai" ? "assistant" : "user",
         content: msg.content,
       }));
 
+      // --- UPDATED ---
+      // 2. Add the API keys directly to the payload object.
+      // The backend will read these from the request body.
       const payload = {
-        messages: [
-          ...historyForAPI,
-          { role: "user", content: userMessageContentForApi },
-        ],
+        prompt: input.trim(), // Send the text prompt separately for the backend
+        history: historyForAPI,
         conversation_name: conversationName,
+        geminiApiKey: geminiApiKey,
+        tavilyApiKey: tavilyApiKey,
       };
 
       let fullResponseText = "";
 
-      const sse = new SSE("http://192.168.0.114:8000/interface_stream/", {
+      // --- UPDATED ---
+      // 3. Remove the incorrect "Authorization" header. The keys are now in the body.
+      const sse = new SSE("https://juno-4m9x.onrender.com/chat", { // Ensure this matches your Flask endpoint
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(payload),
       });
 
@@ -141,8 +167,7 @@ export default function Prompter({
             if (data.type === 'tool_call') {
               setIsLoading(false);
               setToolStatus(`🔎 Searching for: ${data.args.query}...`);
-            }
-            else if (data.type === 'delta' && data.text) {
+            } else if (data.type === 'delta' && data.text) {
               setIsLoading(false);
               setToolStatus(null);
               fullResponseText += data.text;
@@ -150,16 +175,16 @@ export default function Prompter({
                 ...aiResponse,
                 content: [{ type: 'text', text: fullResponseText }]
               });
-            }
-            else if (data.type === 'error') {
+            } else if (data.type === 'error') {
               throw new Error(data.message);
-            }
-            else if (data.type === 'done') {
+            } else if (data.type === 'done') {
               sse.close();
               setIsLoading(false);
               setToolStatus(null);
             }
           } catch (e) {
+            // Handle cases where event.data is not valid JSON
+            console.error("SSE message parsing error:", e);
             setIsLoading(false);
             setToolStatus(null);
           }
@@ -186,9 +211,7 @@ export default function Prompter({
       setToolStatus(null);
     }
   };
-
   const renderAttachmentPreview = (attachment: DocumentPicker.DocumentPickerAsset, index: number) => {
-    // ... (rest of the function is unchanged)
     const isImage = attachment.mimeType?.startsWith("image/");
     return (
       <View key={index} style={styles.attachmentPreview}>
@@ -250,8 +273,6 @@ export default function Prompter({
     </View>
   );
 }
-
-// --- STYLES (NO CHANGES) ---
 const styles = StyleSheet.create({
   container: { width: '85%' },
   attachmentsContainer: { justifyContent: 'center' },

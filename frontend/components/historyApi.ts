@@ -19,7 +19,7 @@ export type Conversation = {
   last_message_time: string;
 };
 
-const backendUrl = `http://192.168.0.114:8000/history/`;
+const backendUrl = `https://juno-4m9x.onrender.com/history/`;
 
 export const fetchConversationsByPage = async (page = 1) => {
   try {
@@ -83,8 +83,7 @@ export const fetchConversationById = async (
   conversation_name: string
 ): Promise<Conversation | null> => {
   try {
-    const response = await fetch(`http://192.168.0.114:8000/conversation/${encodeURIComponent(conversation_name)}/`);
-
+    const response = await fetch(`https://juno-4m9x.onrender.com/conversation/${encodeURIComponent(conversation_name)}/`);
     if (!response.ok) {
       if (response.status === 404) {
         return null;

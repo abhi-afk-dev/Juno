@@ -6,37 +6,48 @@ import {
     StyleSheet,
     TouchableOpacity,
     Alert,
+    ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Define the type for the component's props
 type WelcomeScreenProps = {
-    onNameSubmitted: (name: string) => void;
+    onSetupComplete: () => void;
 };
 
-const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNameSubmitted }) => {
+const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSetupComplete }) => {
     const [userName, setUserName] = useState('');
+    const [geminiApiKey, setGeminiApiKey] = useState(''); // State for the Gemini API Key
+    const [tavilyApiKey, setTavilyApiKey] = useState(''); // State for the Tavily API Key
 
     const handleStartPress = async () => {
         const trimmedName = userName.trim();
-        if (!trimmedName) {
-            Alert.alert('Name Required', 'Please enter your name to continue.');
+        const trimmedGeminiKey = geminiApiKey.trim();
+        const trimmedTavilyKey = tavilyApiKey.trim();
+
+        // Validate all three fields
+        if (!trimmedName || !trimmedGeminiKey || !trimmedTavilyKey) {
+            Alert.alert('All Fields Required', 'Please enter your name, Gemini API key, and Tavily API key.');
             return;
         }
+
         try {
+            // Save all three items to storage
             await AsyncStorage.setItem('userName', trimmedName);
-            onNameSubmitted(trimmedName); // Notify the parent component
+            await AsyncStorage.setItem('geminiApiKey', trimmedGeminiKey);
+            await AsyncStorage.setItem('tavilyApiKey', trimmedTavilyKey);
+            onSetupComplete(); // Signal that setup is done
         } catch (error) {
-            console.error("Failed to save user's name.", error);
-            Alert.alert('Error', 'Could not save your name. Please try again.');
+            console.error("Failed to save user data.", error);
+            Alert.alert('Error', 'Could not save your details. Please try again.');
         }
     };
 
     return (
         <View style={styles.overlayContainer}>
-            <View style={styles.modalView}>
+            <ScrollView contentContainerStyle={styles.modalView}>
                 <Text style={styles.title}>Welcome!</Text>
-                <Text style={styles.subtitle}>Let's get started by setting up your name.</Text>
+                <Text style={styles.subtitle}>Let's set up your name and API keys to get started.</Text>
+                
                 <TextInput
                     style={styles.input}
                     placeholder="Please enter your name"
@@ -44,10 +55,29 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNameSubmitted }) => {
                     value={userName}
                     onChangeText={setUserName}
                 />
+
+                <TextInput
+                    style={styles.input}
+                    placeholder="Enter your Gemini API Key"
+                    placeholderTextColor={'#a1a1a1'}
+                    value={geminiApiKey}
+                    onChangeText={setGeminiApiKey}
+                    secureTextEntry // Hides the API key characters
+                />
+                
+                <TextInput
+                    style={styles.input}
+                    placeholder="Enter your Tavily API Key (for search)"
+                    placeholderTextColor={'#a1a1a1'}
+                    value={tavilyApiKey}
+                    onChangeText={setTavilyApiKey}
+                    secureTextEntry // Hides the API key characters
+                />
+                
                 <TouchableOpacity style={styles.button} onPress={handleStartPress}>
                     <Text style={styles.buttonText}>Get Started</Text>
                 </TouchableOpacity>
-            </View>
+            </ScrollView>
         </View>
     );
 };
@@ -57,7 +87,8 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)', // Semi-transparent background
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        paddingVertical: 40,
     },
     modalView: {
         width: '90%',
@@ -66,10 +97,7 @@ const styles = StyleSheet.create({
         padding: 35,
         alignItems: 'center',
         shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 4,
         elevation: 5,
@@ -94,16 +122,17 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         borderRadius: 15,
         fontSize: 16,
-        marginBottom: 25,
+        marginBottom: 20,
         borderWidth: 1,
         borderColor: '#555555',
     },
     button: {
         width: '100%',
-        backgroundColor: '#6a25ebff', 
+        backgroundColor: '#6a25ebff',
         paddingVertical: 18,
         borderRadius: 15,
         alignItems: 'center',
+        marginTop: 10,
     },
     buttonText: {
         color: '#FFFFFF',

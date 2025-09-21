@@ -1,5 +1,5 @@
 import { Message } from "../app/(tabs)/home"; 
-const API_URL = "http://192.168.0.114:8000/interface_stream/";
+const API_URL = "https://juno-4m9x.onrender.com/interface_stream/";
 
 export const streamResponse = async (
     messages: Message[],
@@ -52,7 +52,7 @@ export const streamResponse = async (
                             onError(data.message);
                         } else if (data.type === 'done') {
                             onComplete();
-                            return; // End the stream processing
+                            return;
                         }
                     }
                 }
