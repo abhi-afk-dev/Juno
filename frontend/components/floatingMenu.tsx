@@ -9,14 +9,18 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
-
 const menuItems = [
-    { icon: 'calculator', route: '/cal' },
-    { icon: 'time', route: '/history' },
-    { icon: 'home', route: '/home' },
+    { icon: 'calculator', route: '/cal', action: 'navigate' },
+    { icon: 'time', route: '/history', action: 'navigate' },
+    { icon: 'home', route: '/', action: 'navigate' },
+    { icon: 'document', action: 'newChat' }, 
 ] as const;
 
-export default function FloatingMenu() {
+type FloatingMenuProps = {
+    onNewChat?: () => void;
+};
+
+export default function FloatingMenu({ onNewChat }: FloatingMenuProps) {
     const router = useRouter();
     const segments = useSegments();
     const [isOpen, setIsOpen] = useState(false);
@@ -32,9 +36,13 @@ export default function FloatingMenu() {
         setIsOpen(!isOpen);
     };
 
-    const handleNavigation = (route: typeof menuItems[number]['route']) => {
-        toggleMenu();
-        router.push(route); 
+    const handleAction = (item: typeof menuItems[number]) => {
+        if (item.action === 'navigate' && 'route' in item) {
+            router.push(item.route);
+        } else if (item.action === 'newChat' && onNewChat) {
+            onNewChat();
+        }
+        toggleMenu(); 
     };
 
     const dragGesture = Gesture.Pan()
@@ -45,7 +53,7 @@ export default function FloatingMenu() {
             translateX.value = event.translationX + context.value.x;
             translateY.value = event.translationY + context.value.y;
         });
-        
+
     const draggableStyle = useAnimatedStyle(() => {
         return {
             transform: [
@@ -65,23 +73,24 @@ export default function FloatingMenu() {
         <GestureDetector gesture={dragGesture}>
             <Animated.View style={[styles.container, draggableStyle]}>
                 {menuItems.map((item, index) => {
-                    const isActive = item.route.includes(activeRouteName);
+                    const isActive = 'route' in item && item.route.includes(activeRouteName);
                     const backgroundColor = isActive ? '#101010' : '#323232';
 
                     const itemAnimatedStyle = useAnimatedStyle(() => {
-                        const translateY = (index + 1) * -70 * animation.value; 
+                        const translateY = (index + 1) * -70 * animation.value;
                         return {
                             transform: [{ translateY }],
                             opacity: animation.value,
                         };
                     });
+
                     return (
-                        <Animated.View key={item.route} style={[styles.menuItem, itemAnimatedStyle]}>
+                        <Animated.View key={index} style={[styles.menuItem, itemAnimatedStyle]}>
                             <TouchableOpacity
                                 style={[styles.menuButton, { backgroundColor }]}
-                                onPress={() => handleNavigation(item.route)}
+                                onPress={() => handleAction(item)}
                             >
-                                <Ionicons name={item.icon} size={28} color="white" />
+                                <Ionicons name={item.icon as any} size={28} color="white" />
                             </TouchableOpacity>
                         </Animated.View>
                     );
@@ -105,7 +114,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     mainButton: {
-        width: 70, 
+        width: 70,
         height: 70,
         borderRadius: 35,
         backgroundColor: '#1d1d1dff',

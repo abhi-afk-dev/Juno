@@ -138,7 +138,7 @@ const Header: React.FC<TimerProps> = ({ timeLeft }) => {
             >
                 <Pressable style={styles.overlayBackground} onPress={closeSettings}>
                     <View style={[styles.settingsOverlay, themeStyles.settingsOverlay]}>
-                        <TouchableOpacity style={styles.overlayOption}>
+                        <TouchableOpacity style={styles.overlayOption} onPress={toggleTheme}>
                             <Text style={[styles.overlayText, themeStyles.overlayText]}>Account</Text>
                         </TouchableOpacity>
                         <View style={[styles.overlaySeparator, themeStyles.overlaySeparator]} />

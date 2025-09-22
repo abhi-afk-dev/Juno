@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router'; // 1. Import useRouter
 import React from 'react';
 import { StatusBar } from 'react-native';
 import 'react-native-gesture-handler';
@@ -7,6 +7,11 @@ import { ThemeProvider, useTheme } from '../../components/themeProvider';
 
 function RootLayoutContent() {
   const { theme } = useTheme();
+  const router = useRouter(); // 2. Get the router instance
+
+  const handleNewChat = () => {
+    router.push('/home');
+  };
 
   return (
     <>
@@ -18,11 +23,11 @@ function RootLayoutContent() {
         }}
       >
         <Tabs.Screen name="home" />
-        {/* <Tabs.Screen name="voice" /> */}
         <Tabs.Screen name="history" />
         <Tabs.Screen name="cal" />
       </Tabs>
-      <FloatingMenu />
+      {/* 4. Pass the function to the FloatingMenu component */}
+      <FloatingMenu onNewChat={handleNewChat} />
     </>
   );
 }

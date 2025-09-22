@@ -57,8 +57,6 @@ function InterfacePage() {
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const [toolStatus, setToolStatus] = useState<string | null>(null);
     const scrollViewRef = useRef<KeyboardAwareScrollView>(null);
-
-    // State for user data
     const [userName, setUserName] = useState<string | null>(null);
     const [geminiApiKey, setGeminiApiKey] = useState<string | null>(null);
     const [tavilyApiKey, setTavilyApiKey] = useState<string | null>(null);
@@ -243,7 +241,6 @@ function InterfacePage() {
     };
 
     const renderMessageContent = (message: Message) => {
-        // ... (rest of the function is unchanged)
         const isUserMessage = message.type === "user";
         let contentParts;
         if (Array.isArray(message.content)) {

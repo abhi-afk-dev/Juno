@@ -2,9 +2,9 @@
   "expo": {
     "name": "JUNO",
     "slug": "JUNOO",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "scheme": "frontend",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "web": {
       "output": "static",
       "favicon": "./assets/images/icon.png"
@@ -42,6 +42,9 @@
       "eas": {
         "projectId": "97499df9-f50b-4cd4-8d43-ee3b83447dea"
       }
+    },
+    "android": {
+      "package": "com.abhi000001.JUNOO"
     }
   }
 }
