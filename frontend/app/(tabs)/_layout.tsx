@@ -26,7 +26,6 @@ function RootLayoutContent() {
         <Tabs.Screen name="history" />
         <Tabs.Screen name="cal" />
       </Tabs>
-      {/* 4. Pass the function to the FloatingMenu component */}
       <FloatingMenu onNewChat={handleNewChat} />
     </>
   );
